@@ -11,13 +11,6 @@ with open(filename, 'r', encoding='utf-16') as csvfile:
     reader = csv.DictReader(csvfile, delimiter='\t')
     data = [row for row in reversed(list(reader))]
 
-
-
-
-
-
-
-
 # show the plots
 class DepositsAndWithDrawals():
     transaction_type = ['INDBETALING', 'HÆVNING']
@@ -46,13 +39,10 @@ class DepositsAndWithDrawals():
             else:
                 sums.append(sums[-1])
 
-
-
         # first plot: animation of sum of INDBETALING transactions
         self.ax.set_xlim(0, len(sums))
         self.ax.set_ylim(0, max(sums))
         self.ax.set_title('', fontsize=40)
-
 
         # second plot: bar chart of total amount of INDBETALING and HÆVNING transactions
         indbetaling_sum = 0
@@ -73,24 +63,23 @@ class DepositsAndWithDrawals():
             self.ax2.text(i, total + 0.1 * max(totals) / 2, f'{total:,.0f} DKK', ha='center')
         return self.fig
 
-    def update(self, i):
-        insert_sum = 0
-        withdraw_sum = 0
+    insert_sum = 0
+    withdraw_sum = 0
 
+    def update(self, i):
         for text_obj in self.ax2.texts:
             text_obj.remove()
 
         self.line.set_data(range(i + 1), self.sum[:i + 1])
-
         self.text.set_text(f'Total sum: {self.sum[i]:,.0f} DKK')
         self.title_text.set_text(f'{date_text}: {data[i][posting_date_text]}')
 
         if data[i]['Transaktionstype'] == 'INDBETALING':
-            insert_sum += float(data[i]['Beløb'].replace(".", "").replace(",", "."))
+            self.insert_sum += float(data[i]['Beløb'].replace(".", "").replace(",", "."))
         elif data[i]['Transaktionstype'] == 'HÆVNING':
-            withdraw_sum += float(data[i]['Beløb'].replace(".", "").replace(",", "."))
+            self.withdraw_sum += float(data[i]['Beløb'].replace(".", "").replace(",", "."))
 
-        totals = [insert_sum, withdraw_sum]
+        totals = [self.insert_sum, self.withdraw_sum]
 
         for rect, total in zip(self.rects, totals):
             rect.set_height(total)
@@ -99,16 +88,15 @@ class DepositsAndWithDrawals():
             self.ax2.text(u, total + 0.1 * max(totals) / 2, f'{total:,.0f} DKK', ha='center')
 
         return self.line, self.text, self.title_text
+
     def figure(self):
         pass
+
 class Animate():
     deposits_and_withdrawals = DepositsAndWithDrawals()
     deposits_and_withdrawals2 = DepositsAndWithDrawals()
 
     fig = deposits_and_withdrawals.deposits_bars()
-    fig2 = deposits_and_withdrawals.deposits_bars()
-
-
 
     def update_data(self):
         def update(i):
@@ -117,24 +105,10 @@ class Animate():
 
             self.deposits_and_withdrawals.analyze(data[i])
             return self.deposits_and_withdrawals.update(i)
-
-
-        return update
-
-    def update_data2(self):
-        def update(i):
-            #    line.set_data(range(i+1), sums[:i+1])
-            # Clear the text objects in ax2
-
-            self.deposits_and_withdrawals.analyze(data[i])
-            return self.deposits_and_withdrawals.update(i)
-
-
         return update
 
     def plot(self):
         my_update_data = self.update_data()
-        my_update_data2 = self.update_data2()
         ani1 = animation.FuncAnimation(self.fig, my_update_data, frames=len(data), interval=0, repeat=False)
         plt.show()
 
