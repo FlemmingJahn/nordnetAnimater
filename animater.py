@@ -1,17 +1,106 @@
 import csv
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.widgets import Button
+import time
+import tkinter as tk
+from tkinter import filedialog
+
 
 date_text = "Dato"
 posting_date_text = "Bogføringsdag"
 
 filename = 'C:/tmp/inbetalinger.csv'
-# read data from csv file
-with open(filename, 'r', encoding='utf-16') as csvfile:
-    reader = csv.DictReader(csvfile, delimiter='\t')
-    data = [row for row in reversed(list(reader))]
 
+data = []
+def read_csv_file(filename):
+    global data
+    # read data from csv file
+    with open(filename, 'r', encoding='utf-16') as csvfile:
+        reader = csv.DictReader(csvfile, delimiter='\t')
+        data = [row for row in reversed(list(reader))]
+
+read_csv_file(filename)
+
+fig1, axs = plt.subplots(nrows=2, ncols=2, figsize=(12, 6))
+fig_ax = axs[0,0]
+fig_ax2 = axs[0,1]
+fig_ax3 = axs[1,0]
+fig1.text(0.5, 0.04, 'x-axis', ha='center')
+fig1.text(0.04, 0.5, 'y-axis', va='center', rotation='vertical')
+
+#fig1, (fig_ax, fig_ax2) = plt.subplots(1, 2, figsize=(12, 6))
 # show the plots
+
+class Yields():
+    transaction_inserts = ['UDB.', 'MAK. UDB.']
+    transaction_tax     = ['UDBYTTESKAT', 'KUPSKAT', 'MAK. UDBYTTESKAT']
+    transaction_type = transaction_inserts + transaction_tax
+
+    transaction_type_text = 'Transaktionstype'
+    amount_text = 'Beløb'
+    exchnage_text = 'Vekslingskurs'
+    total_sums = [0]
+    yield_sums = [0]
+    tax_sums = [0]
+    def __init__(self, _fig_yields, _ax):
+        self.fig_yields = _fig_yields
+        self.ax = _ax
+        self.line, = _ax.plot([], [], label='Total')
+        self.line_yield, = _ax.plot([], [], label='Total')
+        self.line_tax, = _ax.plot([], [], label='Total')
+        self.text = _ax.text(0.02, 0.75, '', transform=_ax.transAxes)
+        self.analyze()
+        #self.init()
+    def init(self):
+        self.total_sums = [0]
+        self.yield_sums = [0]
+        self.tax_sums = [0]
+        self.analyze()
+
+    def analyze(self):
+        # calculate sums
+        for row in data:
+            value = 0
+            exchange = 0;
+            if row['Transaktionstype'] in self.transaction_type:
+                value = float(row['Beløb'].replace(".", "").replace(",", "."))
+                exchange = float(row[self.exchnage_text].replace(".", "").replace(",", "."))
+                self.total_sums.append(self.total_sums[-1] + value * exchange)
+            else:
+                self.total_sums.append(self.total_sums[-1])
+
+            if row['Transaktionstype'] in self.transaction_inserts:
+                self.yield_sums.append(self.yield_sums[-1] + value * exchange)
+            else:
+                self.yield_sums.append(self.yield_sums[-1])
+
+
+            if row['Transaktionstype'] in self.transaction_tax:
+                self.tax_sums.append(self.tax_sums[-1] - value * exchange)
+            else:
+                self.tax_sums.append(self.tax_sums[-1])
+
+        self.ax.set_title('Udbytter')
+
+        self.ax.set_xlim(0, len(self.yield_sums))
+        self.ax.set_ylim(0, max(self.yield_sums))
+
+
+    def plot_line(self, i):
+        self.line.set_data(range(i + 1), self.total_sums[:i + 1])
+        self.line_yield.set_data(range(i + 1), self.yield_sums[:i + 1])
+        self.line_tax.set_data(range(i + 1), self.tax_sums[:i + 1])
+
+        self.ax.legend([f'Udbytte minus skat: {self.total_sums[i + 1]:,.0f} DKK',f'Udbytte: {self.yield_sums[i + 1]:,.0f} DKK', f'Skat: {self.tax_sums[i + 1]:,.0f} DKK'], loc='upper left')
+
+
+
+
+    def update(self, i):
+        self.plot_line(i)
+        return self.line, self.text
+
 class DepositsAndWithDrawals():
     transaction_inserts = ['INDBETALING','INDSÆTTELSE', 'Straksoverførsel']
     transaction_type = ['INDBETALING', 'HÆVNING', "INDSÆTTELSE", 'Straksoverførsel']
@@ -21,12 +110,37 @@ class DepositsAndWithDrawals():
     sum = [0]
     sums = [0]
 
+    ax = None
+    ax2 = None
+    fid = None
+    rects = None
+    text = None
+
+    def __init__(self, fig1, fig_ax, fig_ax2):
+        self.ax = fig_ax
+        self.ax2 = fig_ax2
+        self.fig = fig1
+        self.line, = fig_ax.plot([], [])
+
+        self.text = fig_ax.text(0.02, 0.95, '', transform=fig_ax.transAxes)
+        self.title_text = fig1.suptitle('My Title', fontsize=20)
+        self.rects = 0
+
     # create figure with 2 subplots
-    fig, (ax, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-    line, = ax.plot([], [])
-    text = ax.text(0.02, 0.95, '', transform=ax.transAxes)
-    title_text = fig.suptitle('My Title', fontsize=20)
-    rects = 0
+
+
+
+    def init(self):
+
+        for rect in self.rects:
+            rect.set_height(0)
+
+        self.sum = [0]
+        self.sums = [0]
+        self.insert_sum = 0
+        self.withdraw_sum = 0
+        self.analyze()
+
     def analyze(self):
         # calculate sums
         for row in data:
@@ -37,38 +151,31 @@ class DepositsAndWithDrawals():
         self.ax2.set_title('Ind- og ud-betalinger')
         self.ax.set_title('', fontsize=40)
         self.ax.set_title('Ind- og ud-betalinger')
-
-    def plot_line(self, row, i):
-        if row[self.transaction_type_text] in self.transaction_type:
-            self.sum.append(self.sum[-1] + float(row[self.amount_text].replace(".", "").replace(",", ".")))
-        else:
-            self.sum.append(self.sum[-1])
-
         # first plot: animation of sum of INDBETALING transactions
         self.ax.set_xlim(0, len(self.sums))
         self.ax.set_ylim(0, max(self.sums))
-
-        self.line.set_data(range(i + 1), self.sum[:i + 1])
-        self.text.set_text(f'Total sum: {self.sum[i]:,.0f} DKK')
+    def plot_line(self, i):
+        self.line.set_data(range(i + 1), self.sums[:i + 1])
+        self.ax.legend([f'Total: {self.sums[i]:,.0f} DKK'], loc='upper left')
         self.title_text.set_text(f'{date_text}: {data[i][posting_date_text]}')
 
     def plot_bars(self, index):
+
+
         for text_obj in self.ax2.texts:
             text_obj.remove()
 
-        t = data[index]['Transaktionstype']
-        if t in self.transaction_inserts:
+        if data[index]['Transaktionstype'] in self.transaction_inserts:
             self.insert_sum += float(data[index]['Beløb'].replace(".", "").replace(",", "."))
         elif data[index]['Transaktionstype'] == 'HÆVNING':
             self.withdraw_sum += float(data[index]['Beløb'].replace(".", "").replace(",", "."))
 
 
         totals = [self.insert_sum, self.withdraw_sum]
-        print (index, totals)
         self.rects = self.ax2.bar(['INDBETALING', 'HÆVNING'], totals, color=['green', 'red'])
 
         for rect, total in zip(self.rects, totals):
-                rect.set_height(total)
+            rect.set_height(total)
 
         for u, total in enumerate(totals):
             self.ax2.text(u, total, f'{total:,.0f} DKK', ha='center')
@@ -81,8 +188,9 @@ class DepositsAndWithDrawals():
     insert_sum = 0
     withdraw_sum = 0
 
+
     def update(self, i):
-        self.plot_line(data[i], i)
+        self.plot_line(i)
         self.plot_bars(i)
         return self.line, self.text, self.title_text
 
@@ -90,9 +198,9 @@ class DepositsAndWithDrawals():
         pass
 
 class Animate():
-    deposits_and_withdrawals = DepositsAndWithDrawals()
-
-    fig = deposits_and_withdrawals.get_fig()
+    deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2)
+    yields = Yields(fig1, fig_ax3)
+    ani1 = None
 
     def update_data(self):
         is_first_frame = True  # flag to indicate the first frame
@@ -102,22 +210,58 @@ class Animate():
             if is_first_frame:
                 is_first_frame = False
                 return None  # skip the first frame
-            print (i)
-            #    line.set_data(range(i+1), sums[:i+1])
-            # Clear the text objects in ax2
 
-            #self.deposits_and_withdrawals.analyze(data[i])
-            return self.deposits_and_withdrawals.update(i)
+            self.deposits_and_withdrawals.update(i)
+            self.yields.update(i)
         return update
 
     def plot(self):
         self.deposits_and_withdrawals.analyze()
-        ani1 = animation.FuncAnimation(self.fig,  self.update_data(), frames=len(data), interval=0, repeat=False)
+        self.ani1 = animation.FuncAnimation(fig1,  self.update_data(), frames=len(data), interval= 1, repeat=False)
+
+    def show(self):
+        plt.show()
+
+    def stop_animation(self):
+        try:
+            # Stop the current animation
+            self.ani1.event_source.stop()
+        except:
+            pass
+    def restart_animation(self):
+        self.stop_animation()
+
+        # Reset the plot data
+        self.deposits_and_withdrawals.init()
+        self.yields.init()
+
+        # Create a new animation
+        self.ani1 = animation.FuncAnimation(fig1, self.update_data(), frames=len(data), interval=1, repeat=False)
+
+
+    def restart_animation_event(self, event):
+        self.restart_animation()
+
+    def on_load_button_click(self, event):
+        self.stop_animation()
+        read_csv_file(filedialog.askopenfilename())
+        self.restart_animation()
         plt.show()
 
 
-
-
-
 animate = Animate()
+
+# Create the restart button
+button_ax = plt.axes([0.85, 0.01, 0.1, 0.05])
+restart_button = Button(button_ax, 'Restart')
+
+# Create the load button
+load_button_ax = plt.axes([0.7, 0.01, 0.1, 0.05])
+load_button = Button(load_button_ax, 'Load CVS file')
+load_button.on_clicked(animate.on_load_button_click)
+
+# Set the callback function for the restart button using the instance of the Animate class
+restart_button.on_clicked(animate.restart_animation_event)
+
 animate.plot()
+animate.show()
