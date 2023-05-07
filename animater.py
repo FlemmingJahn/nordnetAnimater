@@ -50,13 +50,19 @@ def read_csv_file(filename):
 
 read_csv_file(filename)
 
-fig1, axs = plt.subplots(nrows=3, ncols=2, figsize=(12, 6))
+fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(12, 6))
 fig_ax = axs[0,0]
 fig_ax2 = axs[0,1]
+axs[0,2].set_position([0, 0, 0, 0])
+
 fig_ax3 = axs[1,0]
 fig_ax4 = axs[1,1]
+fig_yeild_years = axs[1,2]
+
 fig_yield_ax3 = axs[2,0]
 axs[2,1].set_position([0, 0, 0, 0])
+axs[2,2].set_position([0, 0, 0, 0])
+
 fig_yield_ax3.set_position([0.125, 0.1, 0.78, 0.2])
 
 fig1.text(0.5, 0.04, 'x-axis', ha='center')
@@ -73,7 +79,8 @@ class Yields():
     total_sums = [0]
     yield_sums = [0]
     tax_sums = [0]
-    def __init__(self, _fig_yields, _ax, _ax_bars, fig_yield_ax3):
+    years_sum = [0]
+    def __init__(self, _fig_yields, _ax, _ax_bars, fig_yield_ax3, _fig_yield_years):
         self.fig_yields = _fig_yields
         self.ax = _ax
         self.fig_yield_ax3 = fig_yield_ax3
@@ -81,31 +88,43 @@ class Yields():
         self.line, = _ax.plot([], [], label='Total')
         self.line_yield, = _ax.plot([], [], label='Total')
         self.line_tax, = _ax.plot([], [], label='Total')
-
+        self.fig_yields_year = _fig_yield_years
         self.text = _ax.text(0.02, 0.75, '', transform=_ax.transAxes)
         self.valutas_table = {}
         self.stocks_table = {}
+        self.years_table = {}
         self.colors = self.get_random_colors(1)
         self.analyze()
         #self.init()
     def init(self):
         self.total_sums = [0]
         self.yield_sums = [0]
+        self.years_sum = [0]
         self.tax_sums = [0]
         self.valutas_table = {}
         self.stocks_table = {}
+        self.years_table = {}
         self.analyze()
         return self.line, self.text, self.ax_valuta_bars.texts, self.fig_yield_ax3.texts
+
+    def get_year(self, date_string):
+        year = date_string[:4]
+        return year
 
     def analyze(self):
         for row in data:
             valuta = row['Valuta']
             stock = row['Værdipapirer']
+            year = self.get_year(row['Bogføringsdag'])
+
             if valuta not in self.valutas_table:
                 self.valutas_table[valuta] = [0]
             if stock not in self.stocks_table:
                 if isinstance(stock, str):
                     self.stocks_table[stock] = [0]
+
+            if year not in self.years_table:
+                self.years_table[year] = [0]
 
         valuta_keys = self.valutas_table.keys()
         self.colors = self.get_random_colors(len(valuta_keys))
@@ -113,10 +132,14 @@ class Yields():
         stock_keys = self.stocks_table.keys()
         self.stock_colors = self.get_random_colors(len(stock_keys))
 
+        years_keys = self.years_table.keys()
+        self.years_colors = self.get_random_colors(len(years_keys))
+
         # calculate sums
         for row in data:
             valuta = row['Valuta']
             stock  = row['Værdipapirer']
+            year = self.get_year(row['Bogføringsdag'])
             value = float(row['Beløb'].replace(".", "").replace(",", "."))
             exchange = float(row[self.exchnage_text].replace(".", "").replace(",", "."))
             value_in_dk = value*exchange
@@ -141,12 +164,21 @@ class Yields():
                     else:
                         self.stocks_table[k].append(self.stocks_table[k][-1])
 
+                for k in years_keys:
+                    if k == year:
+                        self.years_table[k].append(self.years_table[k][-1] + value_in_dk)
+                    else:
+                        self.years_table[k].append(self.years_table[k][-1])
+
 
             else:
                 for k in valuta_keys:
                     self.valutas_table[k].append(self.valutas_table[k][-1])
                 for k in stock_keys:
                     self.stocks_table[k].append(self.stocks_table[k][-1])
+
+                for k in years_keys:
+                    self.years_table[k].append(self.years_table[k][-1])
 
                 self.yield_sums.append(self.yield_sums[-1])
 
@@ -230,12 +262,35 @@ class Yields():
         rects = self.fig_yield_ax3.bar(keys, totals, color=self.stock_colors)
 
         for u, total in enumerate(totals):
-            self.fig_yield_ax3.text(u, total, f'{total:,.0f} DKK', ha='center')
+            self.fig_yield_ax3.text(u, total, f'{total:,.0f} DK', ha='center')
+
+    def plot_years(self, index):
+        update_needed = False
+        for v in self.years_table:
+            if self.years_table[v][index + 1] != self.years_table[v][index]:
+                update_needed = True
+
+        if not update_needed:
+            return
+
+        for text_obj in self.fig_yields_year.texts:
+            text_obj.remove()
+
+        keys = self.years_table.keys()
+        totals = []
+        for v in self.years_table:
+            totals.append(self.years_table[v][index + 1])
+
+        rects = self.fig_yields_year.bar(keys, totals, color=self.years_colors)
+
+        for u, total in enumerate(totals):
+            self.fig_yields_year.text(u, total, f'{total:,.0f} DKK', ha='center')
 
     def update(self, i):
         self.plot_line(i)
         self.plot_bars(i)
         self.plot_stocks(i)
+        self.plot_years(i)
         return self.line, self.text, self.ax_valuta_bars.texts, self.fig_yield_ax3.texts
 
 
@@ -346,7 +401,7 @@ class CustomFuncAnimation(FuncAnimation):
             pass
 class Animate():
     deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2)
-    yields = Yields(fig1, fig_ax3, fig_ax4, fig_yield_ax3)
+    yields = Yields(fig1, fig_ax3, fig_ax4, fig_yield_ax3, fig_yeild_years)
     ani1 = None
 
     def init_data(self):
