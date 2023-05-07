@@ -469,17 +469,10 @@ class Animate():
 
 animate = Animate()
 
-# Create the restart button
-button_ax = plt.axes([0.85, 0.01, 0.1, 0.05])
-restart_button = Button(button_ax, 'Restart')
-
 # Create the load button
-load_button_ax = plt.axes([0.7, 0.01, 0.1, 0.05])
+load_button_ax = plt.axes([0.7, 0.81, 0.1, 0.05])
 load_button = Button(load_button_ax, 'Load CVS file')
 load_button.on_clicked(animate.on_load_button_click)
-
-# Set the callback function for the restart button using the instance of the Animate class
-restart_button.on_clicked(animate.restart_animation_event)
 
 animate.plot()
 animate.show()
