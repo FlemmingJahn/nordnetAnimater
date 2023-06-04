@@ -5,10 +5,11 @@ import matplotlib.animation as animation
 from matplotlib.widgets import Button
 from matplotlib.animation import FuncAnimation
 
+
 from tkinter import filedialog
 
 class DepositsAndWithDrawals:
-    transaction_inserts = ['INDBETALING','INDSÆTTELSE', 'Straksoverførsel']
+    transaction_inserts = ['INDBETALING', 'INDSÆTTELSE', 'Straksoverførsel']
     transaction_type = ['INDBETALING', 'HÆVNING', "INDSÆTTELSE", 'Straksoverførsel']
     transaction_type_text = 'Transaktionstype'
 
@@ -22,12 +23,11 @@ class DepositsAndWithDrawals:
         self.fig = fig1
         self.line, = fig_ax.plot([], [])
         self.line_text = fig_ax.text(0.04, 0.90, '', transform=fig_ax.transAxes)
-        self.bar_text =  fig_ax2.text(0.04, 0.90, '', transform=fig_ax.transAxes)
         self.insert_sum = [0]
         self.withdraw_sum = [0]
         self.rects = None
+        self.bar_labels = None  # Store the bar label text objects
         self.data = data
-
 
     def init(self):
         self.sum = [0]
@@ -78,24 +78,28 @@ class DepositsAndWithDrawals:
         totals = [self.insert_sum[index + 1], self.withdraw_sum[index + 1]]
         self.rects = self.ax2.bar(['INDBETALING', 'HÆVNING'], totals, color=['green', 'red'])
 
-        for u, total in enumerate(totals):
-            self.ax2.text(u, total, f'{total:,.0f} DKK', ha='center')
+        if self.bar_labels is not None:
+            for label in self.bar_labels:
+                label.remove()
 
-        # Remove previous text objects
-        for text in self.ax2.texts:
-            text.set_visible(False)
-
-        # Display the latest total values
+        self.bar_labels = []
         for rect, total in zip(self.rects, totals):
             height = rect.get_height()
-            self.ax2.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f} DKK', ha='center', va='bottom')
+            label = self.ax2.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f} DKK', ha='center', va='bottom')
+            self.bar_labels.append(label)
 
         return self.rects
 
     def update(self, i):
         self.plot_line(i)
         self.plot_bars(i)
-        return self.line, self.rects, self.line_text
+
+        # Update the bar label positions and text values
+        for rect, total, label in zip(self.rects, [self.insert_sum[i + 1], self.withdraw_sum[i + 1]], self.bar_labels):
+            label.set_position((rect.get_x() + rect.get_width() / 2, 0))
+            label.set_text(f'{total:,.0f} DKK')
+
+        return self.line, self.rects, self.line_text, self.bar_labels
 
     def figure(self):
         pass

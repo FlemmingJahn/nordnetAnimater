@@ -1,10 +1,13 @@
+import random
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 from deposit import *
+from yields import *
 date_text = "Dato"
 posting_date_text = "Bogføringsdag"
-
 filename = 'C:/tmp/inbetalinger.csv'
 
 data = []
@@ -43,8 +46,6 @@ def read_csv_file(filename):
 read_csv_file(filename)
 
 
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(12, 6))
 fig_ax = axs[0, 0]
@@ -71,28 +72,13 @@ for ax in blank_axs:
 
 deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2, data=data)
 deposits_and_withdrawals.analyze()
+yields = Yields(fig1, fig_ax3, fig_ax4, fig_yield_ax3, fig_yeild_years, data=data)
 
 def update(frame):
-    line, rects, text = deposits_and_withdrawals.update(frame)
-    title_text.set_text(f'Data: {data[frame][posting_date_text]}')
-    if frame == 100:
-        animation_finished()
+    line, rects, text, labels  = deposits_and_withdrawals.update(frame)
+    total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects = yields.update(frame)
+    return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects]
 
-    return [line, *rects, text]
 
-# Function to be called once the animation is finished
-def animation_finished():
-    # Stop the animation
-    ani.event_source.stop()
-
-    # Redraw the plot
-    # Here you can update the plot with new data or modify its properties
-    # For example, you can use ax.plot() again to redraw the plot
-
-    # Call plt.show() to display the updated plot
-    title_text = fig1.suptitle('TTTTTTT', fontsize=20)
-    ani.event_source.start()
-    plt.show()
-
-ani = animation.FuncAnimation(fig1, update, frames=len(data), interval=1, repeat=False, blit=True)
+ani = animation.FuncAnimation(fig1, update, frames=len(data), interval=5, repeat=False, blit=True)
 plt.show()
