@@ -72,18 +72,12 @@ for ax in blank_axs:
 
 deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2, data=data)
 deposits_and_withdrawals.analyze()
-yields = Yields(fig1, fig_ax3, fig_ax4, fig_yield_ax3, fig_yeild_years, data=data)
+yields = Yields(fig1, fig_ax3, fig_ax4, fig_yeild_years, fig_yield_ax3 , data=data)
 
 def update(frame):
-    line, rects, text, labels  = deposits_and_withdrawals.update(frame)
-    total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects, line_total_text, valuta_labels = yields.update(frame)
-
-    if valuta_labels is None:
-        pass
-
-    if len(valuta_labels) > 1:
-        pass
-    return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, *valuta_labels]
+    line, rects, text, labels = deposits_and_withdrawals.update(frame)
+    total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects, line_total_text, valuta_labels, years_labels, stocks_labels = yields.update(frame)
+    return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, *valuta_labels, *years_labels, *stocks_labels]
 
 manager = plt.get_current_fig_manager()
 manager.window.showMaximized()

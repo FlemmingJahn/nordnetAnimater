@@ -11,39 +11,47 @@ class Yields():
     yield_sums = [0]
     tax_sums = [0]
     years_sum = [0]
-    def __init__(self, _fig_yields, _ax, _ax_bars, fig_yield_ax3, _fig_yield_years, data):
+    def __init__(self, _fig_yields, _ax, ax_valuta_bars, ax_years_bars, ax_stocks_bars, data):
         self.fig_yields = _fig_yields
         self.ax = _ax
-        self.fig_yield_ax3 = fig_yield_ax3
-        self.ax_valuta_bars = _ax_bars
         self.line_total, = _ax.plot([], [], label='Total')
         self.line_yield, = _ax.plot([], [], label='Total')
         self.line_tax, = _ax.plot([], [], label='Total')
-        self.fig_yields_year = _fig_yield_years
         self.text = _ax.text(0.02, 0.75, '', transform=_ax.transAxes)
-        self.valutas_table = {}
-        self.stocks_table = {}
-        self.years_table = {}
         self.colors = self.get_random_colors(1)
         self.data = data
+        #
+        # Stocks
+        #
+        self.stocks_table = {}
+        self.ax_stocks_bars = ax_stocks_bars
+        self.stocks_labels = []  # Initialize as an empty list
+        self.stocks_rects = self.ax_stocks_bars.bar(0, 0, color=self.colors)
+
+
+        #
+        # Valuta
+        #
+        self.valutas_table = {}
+        self.ax_valuta_bars = ax_valuta_bars
         self.valuta_labels = []  # Initialize as an empty list
         self.valuta_rects = self.ax_valuta_bars.bar(0, 0, color=self.colors)
+
+        #
+        # Years
+        #
+        self.years_table = {}
+        self.ax_years_bars = ax_years_bars
+        self.years_labels = []  # Initialize as an empty list
+        self.years_rects = self.ax_years_bars.bar(0, 0, color=self.colors)
+
+        #
+        #
+        #
         self.analyze()
-        self.stocks_rects = self.fig_yield_ax3.bar(0, 0, color=self.stock_colors)
-        self.year_rects = self.fig_yields_year.bar(0, 0, color=self.years_colors)
         self.line_total_text = self.ax.text(0.40, 0.80, '', transform=self.ax.transAxes)
         self.ax.legend([f'Udbytte minus skat:', f'Udbytte:', f'Skat:'], loc='upper left')
 
-    def init(self):
-        self.total_sums = [0]
-        self.yield_sums = [0]
-        self.years_sum = [0]
-        self.tax_sums = [0]
-        self.valutas_table = {}
-        self.stocks_table = {}
-        self.years_table = {}
-        self.analyze()
-        return self.line_total, self.text, self.ax_valuta_bars.texts, self.fig_yield_ax3.texts
 
     def get_year(self, date_string):
         year = date_string[:4]
@@ -129,23 +137,53 @@ class Yields():
         self.ax.set_title('Udbytter')
         self.ax.set_xlim(0, len(self.yield_sums))
         self.ax.set_ylim(0, max(self.yield_sums))
-        self.ax_valuta_bars.set_title('Udbytter i valuta')
-        self.fig_yields_year.set_title('Udbytte per år')
 
-        self.fig_yield_ax3.set_xticklabels(stock_keys, rotation=90)
-        self.fig_yield_ax3.set_title('Udbytte per aktie i danske kr.')
+        ##
+        ## stocks
+        ##
+        keys = self.stocks_table.keys()
+        totals = []
+        for v in self.stocks_table:
+            totals.append(0)
 
+        self.ax_stocks_bars.set_title('Udbytter i valuta')
+        self.stock_rects = self.ax_stocks_bars.bar(keys, totals, color=self.colors)
+        all_values = [num for sublist in self.stocks_table.values() for num in sublist]
+        max_value = max(all_values) * 1.2
+        self.ax_stocks_bars.set_ylim(0, max_value)
+
+        self.ax_stocks_bars.set_xticklabels(stock_keys, rotation=90)
+        self.ax_stocks_bars.set_title('Udbytte per aktie i danske kr.')
+
+
+        ##
+        ## Valuta
+        ##
         keys = self.valutas_table.keys()
         totals = []
         for v in self.valutas_table:
             totals.append(0)
 
+        self.ax_valuta_bars.set_title('Udbytter i valuta')
         self.valuta_rects = self.ax_valuta_bars.bar(keys, totals, color=self.colors)
-
         all_values = [num for sublist in self.valutas_table.values() for num in sublist]
-        max_value = max(all_values)
-
+        max_value = max(all_values) * 1.2
         self.ax_valuta_bars.set_ylim(0, max_value)
+
+        ##
+        ## Years
+        ##
+        keys = self.years_table.keys()
+        totals = []
+        for v in self.years_table:
+            totals.append(0)
+
+        self.ax_years_bars.set_title('Udbytter per år')
+        self.years_rects = self.ax_years_bars.bar(keys, totals, color=self.colors)
+        all_values = [num for sublist in self.years_table.values() for num in sublist]
+        max_value = max(all_values) * 1.2
+        self.ax_years_bars.set_ylim(0, max_value)
+
     def plot_line(self, i):
         if self.total_sums[:i + 1] == self.total_sums[:i]:
             return
@@ -181,12 +219,6 @@ class Yields():
             totals.append(self.valutas_table[v][index + 1])
 
         self.valuta_rects = self.ax_valuta_bars.bar(keys, totals, color=self.colors)
-
-
-        if self.valuta_labels is not None:
-            for label in self.valuta_labels:
-                label.remove()
-
         self.valuta_labels = []
         for rect, total in zip(self.valuta_rects, totals):
             height = rect.get_height()
@@ -203,21 +235,20 @@ class Yields():
         if not update_needed:
             return
 
-        for text_obj in self.fig_yield_ax3.texts:
-            text_obj.remove()
-
         keys = self.stocks_table.keys()
-
-        #keys = self.valutas_table.keys()
 
         totals = []
         for v in self.stocks_table:
             totals.append(self.stocks_table[v][index + 1])
 
-        self.stocks_rects = self.fig_yield_ax3.bar(keys, totals, color=self.stock_colors)
+        self.stocks_rects = self.ax_stocks_bars.bar(keys, totals, color=self.stock_colors)
 
-        for u, total in enumerate(totals):
-            self.fig_yield_ax3.text(u, total, f'{total:,.0f}', ha='center')
+        self.stocks_labels = []
+        for rect, total in zip(self.stocks_rects, totals):
+            height = rect.get_height()
+            label = self.ax_stocks_bars.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f}', ha='center', va='bottom')
+            self.stocks_labels.append(label)
+
 
     def plot_years(self, index):
         update_needed = False
@@ -228,28 +259,22 @@ class Yields():
         if not update_needed:
             return
 
-        for text_obj in self.fig_yields_year.texts:
-            text_obj.remove()
-
         keys = self.years_table.keys()
         totals = []
         for v in self.years_table:
             totals.append(self.years_table[v][index + 1])
 
-        self.year_rects = self.fig_yields_year.bar(keys, totals, color=self.years_colors)
+        self.years_rects = self.ax_years_bars.bar(keys, totals, color=self.years_colors)
+        self.years_labels = []
+        for rect, total in zip(self.years_rects, totals):
+            height = rect.get_height()
+            label = self.ax_years_bars.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f} DKK', ha='center', va='bottom')
+            self.years_labels.append(label)
 
-        for u, total in enumerate(totals):
-            self.fig_yields_year.text(u, total, f'{total:,.0f} DKK', ha='center')
 
     def update(self, i):
         self.plot_line(i)
         self.plot_valuta_bars(i)
         self.plot_stocks(i)
         self.plot_years(i)
-
-        # Update the bar label positions and text values
-        for rect, total, label in zip(self.valuta_rects, [self.valutas_table['DKK'][i+1]], self.valuta_labels):
-            label.set_position((rect.get_x() + rect.get_width() / 2, 0))
-            label.set_text(f'{total:,.0f} DKK')
-
-        return self.line_total, self.line_yield, self.line_tax, self.valuta_rects, self.year_rects, self.stocks_rects, self.line_total_text, self.valuta_labels
+        return self.line_total, self.line_yield, self.line_tax, self.valuta_rects, self.years_rects, self.stocks_rects, self.line_total_text, self.valuta_labels, self.years_labels, self.stocks_labels
