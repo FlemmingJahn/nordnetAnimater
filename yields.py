@@ -135,6 +135,17 @@ class Yields():
         self.fig_yield_ax3.set_xticklabels(stock_keys, rotation=90)
         self.fig_yield_ax3.set_title('Udbytte per aktie i danske kr.')
 
+        keys = self.valutas_table.keys()
+        totals = []
+        for v in self.valutas_table:
+            totals.append(0)
+
+        self.valuta_rects = self.ax_valuta_bars.bar(keys, totals, color=self.colors)
+
+        all_values = [num for sublist in self.valutas_table.values() for num in sublist]
+        max_value = max(all_values)
+
+        self.ax_valuta_bars.set_ylim(0, max_value)
     def plot_line(self, i):
         if self.total_sums[:i + 1] == self.total_sums[:i]:
             return
@@ -155,9 +166,7 @@ class Yields():
 
 
 
-    def plot_bars(self, index):
-        self.valuta_labels = []  # Initialize as an empty list
-
+    def plot_valuta_bars(self, index):
         update_needed = False
         for v in self.valutas_table:
             if self.valutas_table[v][index + 1] != self.valutas_table[v][index]:
@@ -173,15 +182,17 @@ class Yields():
 
         self.valuta_rects = self.ax_valuta_bars.bar(keys, totals, color=self.colors)
 
+
+        if self.valuta_labels is not None:
+            for label in self.valuta_labels:
+                label.remove()
+
+        self.valuta_labels = []
         for rect, total in zip(self.valuta_rects, totals):
             height = rect.get_height()
             label = self.ax_valuta_bars.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f} DKK', ha='center', va='bottom')
             self.valuta_labels.append(label)
 
-        for rect, total, label in zip(self.valuta_rects, totals, self.valuta_labels):
-            height = rect.get_height()
-            label.set_position((rect.get_x() + rect.get_width() / 2, height))
-            label.set_text(f'{total:,.0f} DKK')
 
     def plot_stocks(self, index):
         update_needed = False
@@ -232,7 +243,7 @@ class Yields():
 
     def update(self, i):
         self.plot_line(i)
-        self.plot_bars(i)
+        self.plot_valuta_bars(i)
         self.plot_stocks(i)
         self.plot_years(i)
 
