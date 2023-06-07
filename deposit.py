@@ -5,7 +5,7 @@ import matplotlib.animation as animation
 from matplotlib.widgets import Button
 from matplotlib.animation import FuncAnimation
 
-
+from matplotlib.ticker import ScalarFormatter
 from tkinter import filedialog
 
 class DepositsAndWithDrawals:
@@ -20,6 +20,11 @@ class DepositsAndWithDrawals:
     def __init__(self, fig1, fig_ax, fig_ax2, data):
         self.ax = fig_ax
         self.ax2 = fig_ax2
+
+        # Disable scientific notation for y-axis tick labels, but keep the axis label as 1e6
+        formatter = ScalarFormatter(useMathText=True)
+        formatter.set_powerlimits((0, 0))
+        self.ax2.yaxis.set_major_formatter(formatter)
         self.fig = fig1
         self.line, = fig_ax.plot([], [])
         self.line_text = fig_ax.text(0.04, 0.90, '', transform=fig_ax.transAxes)

@@ -26,11 +26,14 @@ class Yields():
         self.years_table = {}
         self.colors = self.get_random_colors(1)
         self.data = data
+        self.valuta_labels = []  # Initialize as an empty list
         self.valuta_rects = self.ax_valuta_bars.bar(0, 0, color=self.colors)
         self.analyze()
         self.stocks_rects = self.fig_yield_ax3.bar(0, 0, color=self.stock_colors)
         self.year_rects = self.fig_yields_year.bar(0, 0, color=self.years_colors)
+        self.line_total_text = self.ax.text(0.40, 0.80, '', transform=self.ax.transAxes)
         self.ax.legend([f'Udbytte minus skat:', f'Udbytte:', f'Skat:'], loc='upper left')
+
     def init(self):
         self.total_sums = [0]
         self.yield_sums = [0]
@@ -130,8 +133,7 @@ class Yields():
         self.fig_yields_year.set_title('Udbytte per år')
 
         self.fig_yield_ax3.set_xticklabels(stock_keys, rotation=90)
-        self.fig_yield_ax3.set_title('Udbytte per aktie')
-
+        self.fig_yield_ax3.set_title('Udbytte per aktie i danske kr.')
 
     def plot_line(self, i):
         if self.total_sums[:i + 1] == self.total_sums[:i]:
@@ -139,9 +141,7 @@ class Yields():
         self.line_total.set_data(range(i + 1), self.total_sums[:i + 1])
         self.line_yield.set_data(range(i + 1), self.yield_sums[:i + 1])
         self.line_tax.set_data(range(i + 1), self.tax_sums[:i + 1])
-
-       # self.ax.legend([f'Udbytte minus skat: {self.total_sums[i + 1]:,.0f} DKK', f'Udbytte: {self.yield_sums[i + 1]:,.0f} DKK', f'Skat: {self.tax_sums[i + 1]:,.0f} DKK'], loc='upper left')
-
+        self.line_total_text.set_text(f'{self.yield_sums[i + 1]:,.0f} DKK')
 
     def get_random_colors(self, num_colors=4):
         """
@@ -153,7 +153,11 @@ class Yields():
             colors.append(hex_num)
         return colors
 
+
+
     def plot_bars(self, index):
+        self.valuta_labels = []  # Initialize as an empty list
+
         update_needed = False
         for v in self.valutas_table:
             if self.valutas_table[v][index + 1] != self.valutas_table[v][index]:
@@ -162,20 +166,22 @@ class Yields():
         if not update_needed:
             return
 
-   #     for text_obj in self.ax_valuta_bars.texts:
-   #         text_obj.remove()
-
         keys = self.valutas_table.keys()
-
         totals = []
         for v in self.valutas_table:
             totals.append(self.valutas_table[v][index + 1])
 
         self.valuta_rects = self.ax_valuta_bars.bar(keys, totals, color=self.colors)
 
-  #      for u, total in enumerate(totals):
-  #          self.ax_valuta_bars.text(u, total, f'{total:,.0f} DKK', ha='center')
+        for rect, total in zip(self.valuta_rects, totals):
+            height = rect.get_height()
+            label = self.ax_valuta_bars.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f} DKK', ha='center', va='bottom')
+            self.valuta_labels.append(label)
 
+        for rect, total, label in zip(self.valuta_rects, totals, self.valuta_labels):
+            height = rect.get_height()
+            label.set_position((rect.get_x() + rect.get_width() / 2, height))
+            label.set_text(f'{total:,.0f} DKK')
 
     def plot_stocks(self, index):
         update_needed = False
@@ -200,7 +206,7 @@ class Yields():
         self.stocks_rects = self.fig_yield_ax3.bar(keys, totals, color=self.stock_colors)
 
         for u, total in enumerate(totals):
-            self.fig_yield_ax3.text(u, total, f'{total:,.0f} DK', ha='center')
+            self.fig_yield_ax3.text(u, total, f'{total:,.0f}', ha='center')
 
     def plot_years(self, index):
         update_needed = False
@@ -229,4 +235,10 @@ class Yields():
         self.plot_bars(i)
         self.plot_stocks(i)
         self.plot_years(i)
-        return self.line_total, self.line_yield, self.line_tax, self.valuta_rects, self.year_rects, self.stocks_rects
+
+        # Update the bar label positions and text values
+        for rect, total, label in zip(self.valuta_rects, [self.valutas_table['DKK'][i+1]], self.valuta_labels):
+            label.set_position((rect.get_x() + rect.get_width() / 2, 0))
+            label.set_text(f'{total:,.0f} DKK')
+
+        return self.line_total, self.line_yield, self.line_tax, self.valuta_rects, self.year_rects, self.stocks_rects, self.line_total_text, self.valuta_labels

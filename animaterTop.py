@@ -76,9 +76,17 @@ yields = Yields(fig1, fig_ax3, fig_ax4, fig_yield_ax3, fig_yeild_years, data=dat
 
 def update(frame):
     line, rects, text, labels  = deposits_and_withdrawals.update(frame)
-    total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects = yields.update(frame)
-    return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects]
+    total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects, line_total_text, valuta_labels = yields.update(frame)
 
+    if valuta_labels is None:
+        pass
 
-ani = animation.FuncAnimation(fig1, update, frames=len(data), interval=5, repeat=False, blit=True)
+    if len(valuta_labels) > 1:
+        pass
+    return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, *valuta_labels]
+
+manager = plt.get_current_fig_manager()
+manager.window.showMaximized()
+
+ani = animation.FuncAnimation(fig1, update, frames=len(data), interval=1, repeat=False, blit=True)
 plt.show()
