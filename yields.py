@@ -19,7 +19,7 @@ class Yields():
         self.line_tax, = _ax.plot([], [], label='Total')
         self.text = _ax.text(0.02, 0.75, '', transform=_ax.transAxes)
         self.colors = self.get_random_colors(1)
-        self.data = data
+
         #
         # Stocks
         #
@@ -48,18 +48,23 @@ class Yields():
         #
         #
         #
-        self.analyze()
+        self.analyze(data)
         self.line_total_text = self.ax.text(0.05, 0.60, '', transform=self.ax.transAxes)
         self.line_tax_text = self.ax.text(0.05, 0.50, '', transform=self.ax.transAxes)
         self.line_yeilds_after_tax_text = self.ax.text(0.05, 0.40, '', transform=self.ax.transAxes)
         self.ax.legend([f'Udbytte minus skat:', f'Udbytte:', f'Skat:'], loc='upper left')
 
-
+    def init(self):
+        self.valutas_table = {}
+        self.years_table = {}
+        self.stocks_table = {}
     def get_year(self, date_string):
         year = date_string[:4]
         return year
 
-    def analyze(self):
+    def analyze(self, data):
+        self.init()
+        self.data = data
         for row in self.data:
             valuta = row['Valuta']
             stock = row['Værdipapirer']

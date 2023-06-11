@@ -32,17 +32,17 @@ class DepositsAndWithDrawals:
         self.withdraw_sum = [0]
         self.rects = None
         self.bar_labels = None  # Store the bar label text objects
-        self.data = data
+        self.analyze(data)
 
     def init(self):
         self.sum = [0]
         self.sums = [0]
         self.insert_sum = [0]
         self.withdraw_sum = [0]
-        self.analyze()
-        return self.line, self.ax2, self.line_text
 
-    def analyze(self):
+    def analyze(self, data):
+        self.init()
+        self.data = data
         for row in self.data:
             if row['Transaktionstype'] in self.transaction_type:
                 self.sums.append(self.sums[-1] + float(row['Beløb'].replace(".", "").replace(",", ".")))
