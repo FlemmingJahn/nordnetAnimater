@@ -49,7 +49,9 @@ class Yields():
         #
         #
         self.analyze()
-        self.line_total_text = self.ax.text(0.40, 0.80, '', transform=self.ax.transAxes)
+        self.line_total_text = self.ax.text(0.05, 0.60, '', transform=self.ax.transAxes)
+        self.line_tax_text = self.ax.text(0.05, 0.50, '', transform=self.ax.transAxes)
+        self.line_yeilds_after_tax_text = self.ax.text(0.05, 0.40, '', transform=self.ax.transAxes)
         self.ax.legend([f'Udbytte minus skat:', f'Udbytte:', f'Skat:'], loc='upper left')
 
 
@@ -174,6 +176,7 @@ class Yields():
         ## Years
         ##
         keys = self.years_table.keys()
+        keys = self.years_table.keys()
         totals = []
         for v in self.years_table:
             totals.append(0)
@@ -190,7 +193,9 @@ class Yields():
         self.line_total.set_data(range(i + 1), self.total_sums[:i + 1])
         self.line_yield.set_data(range(i + 1), self.yield_sums[:i + 1])
         self.line_tax.set_data(range(i + 1), self.tax_sums[:i + 1])
-        self.line_total_text.set_text(f'{self.yield_sums[i + 1]:,.0f} DKK')
+        self.line_total_text.set_text(f'Udbytte {self.yield_sums[i + 1]:,.0f} DKK')
+        self.line_tax_text.set_text(f'Skat {self.tax_sums[i + 1]:,.0f} DKK')
+        self.line_yeilds_after_tax_text.set_text(f'Udbytte efter skat {self.total_sums[i + 1]:,.0f} DKK')
 
     def get_random_colors(self, num_colors=4):
         """
@@ -277,4 +282,4 @@ class Yields():
         self.plot_valuta_bars(i)
         self.plot_stocks(i)
         self.plot_years(i)
-        return self.line_total, self.line_yield, self.line_tax, self.valuta_rects, self.years_rects, self.stocks_rects, self.line_total_text, self.valuta_labels, self.years_labels, self.stocks_labels
+        return self.line_total, self.line_yield, self.line_tax, self.valuta_rects, self.years_rects, self.stocks_rects, self.line_total_text, self.line_tax_text, self.line_yeilds_after_tax_text, self.valuta_labels, self.years_labels, self.stocks_labels
