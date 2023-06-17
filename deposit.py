@@ -1,12 +1,4 @@
-import csv
-import random
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.widgets import Button
-from matplotlib.animation import FuncAnimation
-
 from matplotlib.ticker import ScalarFormatter
-from tkinter import filedialog
 
 class DepositsAndWithDrawals:
     transaction_inserts = ['INDBETALING', 'INDSÆTTELSE', 'Straksoverførsel']
@@ -30,8 +22,8 @@ class DepositsAndWithDrawals:
         self.line_text = fig_ax.text(0.04, 0.90, '', transform=fig_ax.transAxes)
         self.insert_sum = [0]
         self.withdraw_sum = [0]
-        self.rects = None
-        self.bar_labels = None  # Store the bar label text objects
+        self.rects = self.ax2.bar(['INDBETALING', 'HÆVNING'], [0,0], color=['green', 'red'])
+        self.bar_labels = []  # Store the bar label text objects
         self.analyze(data)
 
     def init(self):
@@ -60,10 +52,19 @@ class DepositsAndWithDrawals:
         self.ax2.set_title('Ind- og ud-betalinger')
         self.ax.set_title('', fontsize=40)
         self.ax.set_title('Ind- og ud-betalinger')
-        self.ax.set_xlim(0, len(self.sums))
-        self.ax.set_ylim(0, max(self.sums))
 
-        self.ax2.set_ylim([min(self.withdraw_sum), max(self.insert_sum)])  # Adjust the range as needed
+        if (len(self.sums) != 0):
+            if len(set(self.sums)) == 1:  # Check if all values in self.sums are the same
+                self.ax.set_ylim(0, max(self.sums) + 1)  # Expand the limits slightly
+                self.ax.set_xlim(0, max(self.sums) + 1)  # Expand the limits slightly
+            else:
+                self.ax.set_ylim(0, max(self.sums))
+                self.ax.set_xlim(0, max(self.sums))
+
+            if min(self.withdraw_sum) == max(self.insert_sum):
+                self.ax2.set_ylim([min(self.withdraw_sum), max(self.insert_sum) +1 ])  # Adjust the range as needed
+            else:
+                self.ax2.set_ylim([min(self.withdraw_sum), max(self.insert_sum)])  # Adjust the range as needed
 
     def plot_line(self, i):
         if self.sums[:i + 1] == self.sums[:i]:

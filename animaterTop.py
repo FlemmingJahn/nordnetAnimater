@@ -1,28 +1,26 @@
+import matplotlib
 from deposit import *
 from yields import *
-from cvsReader import *
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Slider, Button
 import matplotlib.animation as animation
-from matplotlib.widgets import Button
-from tkinter import Tk, filedialog
-def set_filename():
-    global filename
-    root = Tk()
-    root.withdraw()
-    file_path = filedialog.askopenfilename()
-    if file_path:
-        filename = file_path
-        # Update data and perform analysis with the new filename
-        global data
-        data = read_csv_file(filename)
+from readData import *
+import argparse
+
+parser = argparse.ArgumentParser(description='Process a filename.')
+parser.add_argument('-f', '--filename', default=None, help='Fil der indeholder Nordnet CVS data')
+parser.add_argument('-w', '--wxagg', dest='wxagg', action='store_true', help='Brug XXAgg libary')
+args = parser.parse_args()
+filename = args.filename
+use_wxagg = args.wxagg
+
+if use_wxagg:
+    matplotlib.use('WXAgg')
+
+data = get_data(filename)
 
 date_text = "Dato"
 posting_date_text = "Bogføringsdag"
-filename = 'C:/tmp/inbetalinger.csv'
-set_filename()
 
-data = read_csv_file(filename)
 fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(12, 6))
 fig_ax = axs[0, 0]
 fig_ax2 = axs[0, 1]
@@ -53,12 +51,32 @@ def update(frame):
     total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, valuta_labels, years_labels, stocks_labels = yields.update(frame)
     return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, *valuta_labels, *years_labels, *stocks_labels]
 
-manager = plt.get_current_fig_manager()
-manager.window.showMaximized()
+def maximize_window():
+    f = fig1
+    x = 0
+    y = 0
+    h = 4096
+    w = 2160
+    """Move figure's upper left corner to pixel (x, y)"""
+    backend = matplotlib.get_backend()
+    if backend == 'TkAgg':
+        pass
+        #f.canvas.manager.window.wm_geometry("+%d+%d+%d+%d" % (x, y, w, h))
+    elif backend == 'WXAgg':
+        fig1.canvas.manager.window.Maximize()
+
+        #f.canvas.manager.window.SetPosition((x, y, w, h))
+    else:
+        # This works for QT and GTK
+        # You can also use window.setGeometry
+        f.canvas.manager.window.move(x, y, w, h)
+    pass
+
 
 def start_animation():
     global ani
     ani = animation.FuncAnimation(fig1, update, frames=len(data), interval=1, repeat=False, blit=True)
     plt.show()
 
+maximize_window()
 start_animation()

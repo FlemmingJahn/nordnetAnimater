@@ -158,7 +158,7 @@ class Yields():
         all_values = [num for sublist in self.stocks_table.values() for num in sublist]
         max_value = max(all_values) * 1.2
         self.ax_stocks_bars.set_ylim(0, max_value)
-
+        self.ax_stocks_bars.set_xticks(range(len(stock_keys)))  # Set the x-axis tick positions
         self.ax_stocks_bars.set_xticklabels(stock_keys, rotation=90)
         self.ax_stocks_bars.set_title('Udbytte per aktie i danske kr.')
 
