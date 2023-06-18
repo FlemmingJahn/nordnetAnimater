@@ -46,10 +46,12 @@ for ax in blank_axs:
 deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2, data=data)
 yields = Yields(fig1, fig_ax3, fig_ax4, fig_yeild_years, fig_yield_ax3, data=data)
 
+
 def update(frame):
     line, rects, text, labels = deposits_and_withdrawals.update(frame)
     total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, valuta_labels, years_labels, stocks_labels = yields.update(frame)
     return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, *valuta_labels, *years_labels, *stocks_labels]
+
 
 def maximize_window():
     f = fig1
@@ -70,7 +72,6 @@ def maximize_window():
         # This works for QT and GTK
         # You can also use window.setGeometry
         f.canvas.manager.window.move(x, y, w, h)
-    pass
 
 
 def start_animation():
