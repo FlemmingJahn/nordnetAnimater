@@ -22,6 +22,10 @@ COLOR_PALETTE = [
 ]
 
 
+def _colors_for(keys):
+    return [COLOR_PALETTE[i % len(COLOR_PALETTE)] for i in range(len(keys))]
+
+
 def _to_float(value):
     return float(str(value).replace(".", "").replace(",", "."))
 
@@ -147,9 +151,9 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
     fig.add_trace(go.Scatter(x=[0], y=[yields_["total_sums"][0]], mode="lines", name="Udbytte efter skat"), row=2, col=1)
     fig.add_trace(go.Scatter(x=[0], y=[yields_["yield_sums"][0]], mode="lines", name="Udbytte"), row=2, col=1)
     fig.add_trace(go.Scatter(x=[0], y=[yields_["tax_sums"][0]], mode="lines", name="Skat"), row=2, col=1)
-    fig.add_trace(go.Bar(x=valuta_keys, y=[0] * len(valuta_keys), marker_color=COLOR_PALETTE, name="Valuta"), row=2, col=2)
-    fig.add_trace(go.Bar(x=year_keys, y=[0] * len(year_keys), marker_color=COLOR_PALETTE, name="År"), row=2, col=3)
-    fig.add_trace(go.Bar(x=stock_keys, y=[0] * len(stock_keys), marker_color=COLOR_PALETTE, name="Aktie"), row=3, col=1)
+    fig.add_trace(go.Bar(x=valuta_keys, y=[0] * len(valuta_keys), marker_color=_colors_for(valuta_keys), name="Valuta"), row=2, col=2)
+    fig.add_trace(go.Bar(x=year_keys, y=[0] * len(year_keys), marker_color=_colors_for(year_keys), name="År"), row=2, col=3)
+    fig.add_trace(go.Bar(x=stock_keys, y=[0] * len(stock_keys), marker_color=_colors_for(stock_keys), name="Aktie"), row=3, col=1)
 
     fig.update_yaxes(range=[0, max(deposits["sums"]) * 1.05 + 1], row=1, col=1)
     fig.update_yaxes(range=[min(deposits["withdraw_sum"] + [0]), max(deposits["insert_sum"]) * 1.05 + 1], row=1, col=2)
