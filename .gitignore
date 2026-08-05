@@ -3,3 +3,8 @@
 /__pycache__/yields.cpython-310.pyc
 /__pycache__
 /build
+
+# Personal financial data - never commit real Nordnet exports
+*.csv
+!example/*.csv
+

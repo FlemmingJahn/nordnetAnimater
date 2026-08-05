@@ -26,12 +26,27 @@ def remap(fieldnames):
 
 
 def read_csv_file(filename):
-    global data
-    # read data from csv file
+    # read data from csv file on disk
     with open(filename, 'r', encoding='utf-16') as csvfile:
-        df = pd.read_csv(csvfile, delimiter='\t')
+        return read_csv_data(csvfile)
+
+
+def read_csv_data(file_obj):
+    """Parse Nordnet CSV data from an already-open text stream or a
+    binary/bytes-like file object (e.g. Streamlit's uploaded file),
+    returning the rows in chronological order.
+    """
+    import io
+
+    if hasattr(file_obj, 'read'):
+        # Detect binary mode (e.g. Streamlit UploadedFile) and wrap it
+        # so pandas can decode the utf-16 text.
+        sample = file_obj.read(0)
+        if isinstance(sample, bytes):
+            file_obj = io.TextIOWrapper(file_obj, encoding='utf-16')
+
+    df = pd.read_csv(file_obj, delimiter='\t')
     data1 = df.to_dict('records')
-    data = [row for row in reversed(data1)]
-    return data
+    return [row for row in reversed(data1)]
 
 
