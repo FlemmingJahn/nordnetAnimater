@@ -1,19 +1,19 @@
-"""Web version of nordnetVisualizer.py, built with Streamlit.
+"""Web version of nordnetVisualizer.py, built with Streamlit + Plotly.
 
 Run locally with:
     streamlit run streamlit_app.py
 
-Reuses the existing analysis classes (DepositsAndWithDrawals, Yields) and CSV
-parsing (cvsReader) so the numbers/plots stay identical to the desktop app;
-only the animation driver changes from matplotlib's FuncAnimation to a
-Streamlit slider + play button.
+The numeric analysis mirrors deposit.py / yields.py (see plotlyCharts.py),
+but rendering uses a single Plotly figure with animation frames instead of
+matplotlib. Play/Pause and the slider are handled entirely client-side by
+Plotly.js in the browser, so playback is smooth and doesn't require a
+round-trip to the server for every transaction (unlike re-rendering a
+matplotlib image per step).
 """
-import matplotlib.pyplot as plt
 import streamlit as st
 
 from cvsReader import read_csv_data
-from deposit import DepositsAndWithDrawals
-from yields import Yields
+from plotlyCharts import build_figure
 
 st.set_page_config(page_title="Nordnet Visualizer", layout="wide")
 st.title("Nordnet Visualizer")
@@ -39,64 +39,16 @@ if not data:
 
 n = len(data)
 
-# (Re)build the figure and analysis models only when the dataset changes,
-# so the objects persist across reruns and behave like a real animation.
-if st.session_state.get("data_key") != data_key:
-    fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(14, 8), dpi=80)
-
-    fig_ax, fig_ax2 = axs[0, 0], axs[0, 1]
-    axs[0, 2].axis("off")
-
-    fig_ax3, fig_ax4, fig_yield_years = axs[1, 0], axs[1, 1], axs[1, 2]
-    fig_yield_ax3 = axs[2, 0]
-    axs[2, 1].axis("off")
-    axs[2, 2].axis("off")
-    fig_yield_ax3.set_position([0.125, 0.1, 0.78, 0.2])
-
-    deposits = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2, data=data)
-    yields_ = Yields(fig1, fig_ax3, fig_ax4, fig_yield_years, fig_yield_ax3, data=data)
-
-    st.session_state.fig = fig1
-    st.session_state.deposits = deposits
-    st.session_state.yields = yields_
-    st.session_state.data_key = data_key
-    st.session_state.frame = n - 1
-    st.session_state.playing = False
-
-fig1 = st.session_state.fig
-deposits = st.session_state.deposits
-yields_ = st.session_state.yields
-
-col1, col2, col3 = st.columns([1, 1, 3])
-with col1:
-    label = "Pause" if st.session_state.playing else "Play"
-    if st.button(label):
-        st.session_state.playing = not st.session_state.playing
-with col2:
-    if st.button("Reset"):
-        st.session_state.frame = 0
-        st.session_state.playing = False
-with col3:
-    # Each Play step re-renders the whole figure and sends it over the
-    # network, which is much slower than a local matplotlib animation.
-    # Skipping several transactions per step keeps playback smooth even
-    # on large files / slower hosting.
-    steps_per_tick = st.slider(
-        "Playback speed (transactions per step)", min_value=1, max_value=200, value=max(1, n // 200)
-    )
-
-st.session_state.frame = st.slider(
-    "Transaction", min_value=0, max_value=n - 1, value=st.session_state.frame
+max_frames = st.slider(
+    "Detail level (number of animation frames)",
+    min_value=min(20, n), max_value=n, value=min(200, n),
+    help="Higher = smoother/more granular animation but a larger page to load.",
 )
 
-deposits.update(st.session_state.frame)
-yields_.update(st.session_state.frame)
+# Rebuild the figure only when the dataset or detail level changes.
+if st.session_state.get("fig_key") != (data_key, max_frames):
+    with st.spinner("Building animation..."):
+        st.session_state.fig = build_figure(data, max_frames=max_frames)
+    st.session_state.fig_key = (data_key, max_frames)
 
-st.pyplot(fig1)
-
-if st.session_state.playing:
-    if st.session_state.frame >= n - 1:
-        st.session_state.playing = False
-    else:
-        st.session_state.frame = min(st.session_state.frame + steps_per_tick, n - 1)
-        st.rerun()
+st.plotly_chart(st.session_state.fig, use_container_width=True)
