@@ -8,8 +8,6 @@ parsing (cvsReader) so the numbers/plots stay identical to the desktop app;
 only the animation driver changes from matplotlib's FuncAnimation to a
 Streamlit slider + play button.
 """
-import time
-
 import matplotlib.pyplot as plt
 import streamlit as st
 
@@ -44,7 +42,7 @@ n = len(data)
 # (Re)build the figure and analysis models only when the dataset changes,
 # so the objects persist across reruns and behave like a real animation.
 if st.session_state.get("data_key") != data_key:
-    fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(14, 8))
+    fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(14, 8), dpi=80)
 
     fig_ax, fig_ax2 = axs[0, 0], axs[0, 1]
     axs[0, 2].axis("off")
@@ -69,7 +67,7 @@ fig1 = st.session_state.fig
 deposits = st.session_state.deposits
 yields_ = st.session_state.yields
 
-col1, col2, _ = st.columns([1, 1, 4])
+col1, col2, col3 = st.columns([1, 1, 3])
 with col1:
     label = "Pause" if st.session_state.playing else "Play"
     if st.button(label):
@@ -78,6 +76,14 @@ with col2:
     if st.button("Reset"):
         st.session_state.frame = 0
         st.session_state.playing = False
+with col3:
+    # Each Play step re-renders the whole figure and sends it over the
+    # network, which is much slower than a local matplotlib animation.
+    # Skipping several transactions per step keeps playback smooth even
+    # on large files / slower hosting.
+    steps_per_tick = st.slider(
+        "Playback speed (transactions per step)", min_value=1, max_value=200, value=max(1, n // 200)
+    )
 
 st.session_state.frame = st.slider(
     "Transaction", min_value=0, max_value=n - 1, value=st.session_state.frame
@@ -92,6 +98,5 @@ if st.session_state.playing:
     if st.session_state.frame >= n - 1:
         st.session_state.playing = False
     else:
-        time.sleep(0.05)
-        st.session_state.frame += 1
+        st.session_state.frame = min(st.session_state.frame + steps_per_tick, n - 1)
         st.rerun()
