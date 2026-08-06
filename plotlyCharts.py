@@ -12,7 +12,7 @@ from plotly.subplots import make_subplots
 DEPOSIT_TRANSACTION_INSERTS = ['INDBETALING', 'INDSÆTTELSE', 'Straksoverførsel']
 DEPOSIT_TRANSACTION_TYPES = ['INDBETALING', 'HÆVNING', 'INDSÆTTELSE', 'Straksoverførsel']
 
-YIELD_TRANSACTION_INSERTS = ['UDB.', 'MAK. UDB.']
+YIELD_TRANSACTION_INSERTS = ['UDB.', 'MAK. UDB.', 'UDBYTTE']
 YIELD_TRANSACTION_TAX = ['UDBYTTESKAT', 'KUPSKAT', 'MAK. UDBYTTESKAT']
 YIELD_TRANSACTION_TYPES = YIELD_TRANSACTION_INSERTS + YIELD_TRANSACTION_TAX
 
@@ -26,8 +26,32 @@ def _colors_for(keys):
     return [COLOR_PALETTE[i % len(COLOR_PALETTE)] for i in range(len(keys))]
 
 
+def _is_missing(value):
+    return value is None or (isinstance(value, float) and value != value)
+
+
 def _to_float(value):
     return float(str(value).replace(".", "").replace(",", "."))
+
+
+def _get_amount_currency(row):
+    """Currency of 'Beløb'. Some Nordnet exports only reliably populate the
+    second 'Valuta' duplicate column (renamed 'Valuta.1' by pandas), while
+    the first 'Valuta' is actually the currency of 'Samlede afgifter'."""
+    if 'Valuta.1' in row and not _is_missing(row['Valuta.1']):
+        return row['Valuta.1']
+    return row.get('Valuta')
+
+
+def _get_exchange_rate(row):
+    """Exchange rate for converting 'Beløb' to DKK. Newer Nordnet exports
+    frequently leave 'Vekslingskurs' blank and use 'Middelkurs' instead;
+    when both are blank the transaction is already in DKK (rate 1)."""
+    for col in ('Vekslingskurs', 'Middelkurs'):
+        value = row.get(col)
+        if not _is_missing(value):
+            return _to_float(value)
+    return 1.0
 
 
 def _get_year(date_string):
@@ -66,7 +90,7 @@ def analyze_yields(data):
     valutas_table, stocks_table, years_table = {}, {}, {}
 
     for row in data:
-        valutas_table.setdefault(row['Valuta'], [0.0])
+        valutas_table.setdefault(_get_amount_currency(row), [0.0])
         stock = row['Værdipapirer']
         if isinstance(stock, str):
             stocks_table.setdefault(stock, [0.0])
@@ -76,10 +100,10 @@ def analyze_yields(data):
 
     for row in data:
         ttype = row['Transaktionstype']
-        valuta = row['Valuta']
+        valuta = _get_amount_currency(row)
         stock = row['Værdipapirer']
         year = _get_year(row['Bogføringsdag'])
-        value_dk = _to_float(row['Beløb']) * _to_float(row['Vekslingskurs'])
+        value_dk = _to_float(row['Beløb']) * _get_exchange_rate(row)
 
         total_sums.append(total_sums[-1] + value_dk if ttype in YIELD_TRANSACTION_TYPES else total_sums[-1])
 

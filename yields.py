@@ -1,6 +1,36 @@
 import random
+
+
+def _is_missing(value):
+    return value is None or (isinstance(value, float) and value != value)
+
+
+def _to_float(value):
+    return float(str(value).replace(".", "").replace(",", "."))
+
+
+def get_amount_currency(row):
+    """Currency of 'Beløb'. Some Nordnet exports only reliably populate the
+    second 'Valuta' duplicate column (renamed 'Valuta.1' by pandas), while
+    the first 'Valuta' is actually the currency of 'Samlede afgifter'."""
+    if 'Valuta.1' in row and not _is_missing(row['Valuta.1']):
+        return row['Valuta.1']
+    return row.get('Valuta')
+
+
+def get_exchange_rate(row):
+    """Exchange rate for converting 'Beløb' to DKK. Newer Nordnet exports
+    frequently leave 'Vekslingskurs' blank and use 'Middelkurs' instead;
+    when both are blank the transaction is already in DKK (rate 1)."""
+    for col in ('Vekslingskurs', 'Middelkurs'):
+        value = row.get(col)
+        if not _is_missing(value):
+            return _to_float(value)
+    return 1.0
+
+
 class Yields():
-    transaction_inserts = ['UDB.', 'MAK. UDB.']
+    transaction_inserts = ['UDB.', 'MAK. UDB.', 'UDBYTTE']
     transaction_tax     = ['UDBYTTESKAT', 'KUPSKAT', 'MAK. UDBYTTESKAT']
     transaction_type = transaction_inserts + transaction_tax
 
@@ -66,7 +96,7 @@ class Yields():
         self.init()
         self.data = data
         for row in self.data:
-            valuta = row['Valuta']
+            valuta = get_amount_currency(row)
             stock = row['Værdipapirer']
             year = self.get_year(row['Bogføringsdag'])
 
@@ -90,11 +120,11 @@ class Yields():
 
         # calculate sums
         for row in self.data:
-            valuta = row['Valuta']
+            valuta = get_amount_currency(row)
             stock  = row['Værdipapirer']
             year = self.get_year(row['Bogføringsdag'])
-            value = float(row['Beløb'].replace(".", "").replace(",", "."))
-            exchange = float(row[self.exchnage_text].replace(".", "").replace(",", "."))
+            value = _to_float(row['Beløb'])
+            exchange = get_exchange_rate(row)
             value_in_dk = value*exchange
 
 
