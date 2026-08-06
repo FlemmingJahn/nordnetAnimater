@@ -5,7 +5,7 @@ from deposit import *
 from yields import *
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.widgets import Slider
+from matplotlib.widgets import Slider, Button
 from readData import *
 import argparse
 #import wx
@@ -62,30 +62,51 @@ yields = Yields(fig1, fig_ax3, fig_ax4, fig_yeild_years, fig_yield_ax3, data=dat
 
 # Live-adjustable playback speed. `position` tracks how far through the
 # data we currently are; `playback` holds the current step size (how many
-# transactions to advance per frame) and interval (ms between frames),
-# both changeable at runtime via the sliders below without restarting.
+# transactions to advance per frame), changeable at runtime via the
+# "Update hastighed" slider without restarting the script.
 position = {"i": 0}
-playback = {"step": step, "interval": interval}
+playback = {"step": step}
+playing = {"flag": True}
 
-step_ax = fig1.add_axes([0.15, 0.08, 0.3, 0.03])
-step_slider = Slider(step_ax, 'Trin/billede', 1, max(50, step), valinit=step, valstep=1)
+speed_ax = fig1.add_axes([0.15, 0.08, 0.45, 0.03])
+speed_slider = Slider(speed_ax, 'Update hastighed', 1, max(50, step), valinit=step, valstep=1)
 
-interval_ax = fig1.add_axes([0.55, 0.08, 0.3, 0.03])
-interval_slider = Slider(interval_ax, 'Ventetid (ms)', 1, max(200, interval), valinit=interval, valstep=1)
+restart_ax = fig1.add_axes([0.65, 0.06, 0.12, 0.05])
+restart_button = Button(restart_ax, 'Genstart')
+
+pause_ax = fig1.add_axes([0.79, 0.06, 0.12, 0.05])
+pause_button = Button(pause_ax, 'Pause')
 
 
-def on_step_change(val):
+def on_speed_change(val):
     playback["step"] = max(1, int(val))
 
 
-def on_interval_change(val):
-    playback["interval"] = max(1, int(val))
-    if 'ani' in globals():
-        ani.event_source.interval = playback["interval"]
+speed_slider.on_changed(on_speed_change)
 
 
-step_slider.on_changed(on_step_change)
-interval_slider.on_changed(on_interval_change)
+def on_pause_clicked(_event):
+    if playing["flag"]:
+        ani.event_source.stop()
+        pause_button.label.set_text('Afspil')
+    else:
+        ani.event_source.start()
+        pause_button.label.set_text('Pause')
+    playing["flag"] = not playing["flag"]
+
+
+def on_restart_clicked(_event):
+    position["i"] = 0
+    playing["flag"] = True
+    pause_button.label.set_text('Pause')
+    ani.event_source.stop()
+    update(None)
+    fig1.canvas.draw_idle()
+    ani.event_source.start()
+
+
+pause_button.on_clicked(on_pause_clicked)
+restart_button.on_clicked(on_restart_clicked)
 
 
 def update(_):
@@ -104,7 +125,7 @@ def update(_):
 def start_animation():
     global ani
 
-    ani = animation.FuncAnimation(fig1, update, frames=itertools.count(), interval=playback["interval"], repeat=False, blit=True, cache_frame_data=False)
+    ani = animation.FuncAnimation(fig1, update, frames=itertools.count(), interval=interval, repeat=False, blit=True, cache_frame_data=False)
 
     if save_animation:
         Writer = animation.writers['ffmpeg']
