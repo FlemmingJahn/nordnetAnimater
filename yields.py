@@ -1,4 +1,7 @@
 import random
+from datetime import datetime
+
+import matplotlib.dates as mdates
 
 
 def _is_missing(value):
@@ -92,9 +95,21 @@ class Yields():
         year = date_string[:4]
         return year
 
+    def parse_date(self, date_string):
+        return datetime.strptime(str(date_string), '%Y-%m-%d')
+
     def analyze(self, data):
         self.init()
         self.data = data
+
+        # One date per cumulative-sum entry: a leading baseline date (same
+        # as the first transaction) plus one per row, so self.dates lines
+        # up with total_sums/yield_sums/tax_sums (which also start with a
+        # leading 0).
+        self.dates = [self.parse_date(data[0]['Bogføringsdag'])] if data else [datetime.today()]
+        for row in data:
+            self.dates.append(self.parse_date(row['Bogføringsdag']))
+
         for row in self.data:
             valuta = get_amount_currency(row)
             stock = row['Værdipapirer']
@@ -172,7 +187,11 @@ class Yields():
 
 
         self.ax.set_title('Udbytter')
-        self.ax.set_xlim(0, len(self.yield_sums))
+        self.ax.set_xlim(self.dates[0], self.dates[-1])
+        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+        for label in self.ax.get_xticklabels():
+            label.set_rotation(45)
+            label.set_ha('right')
         self.ax.set_ylim(0, max(self.yield_sums))
 
         ##
@@ -225,9 +244,10 @@ class Yields():
     def plot_line(self, i):
         if self.total_sums[:i + 1] == self.total_sums[:i]:
             return
-        self.line_total.set_data(range(i + 1), self.total_sums[:i + 1])
-        self.line_yield.set_data(range(i + 1), self.yield_sums[:i + 1])
-        self.line_tax.set_data(range(i + 1), self.tax_sums[:i + 1])
+        x = self.dates[:i + 1]
+        self.line_total.set_data(x, self.total_sums[:i + 1])
+        self.line_yield.set_data(x, self.yield_sums[:i + 1])
+        self.line_tax.set_data(x, self.tax_sums[:i + 1])
         self.line_total_text.set_text(f'Udbytte {self.yield_sums[i + 1]:,.0f} DKK')
         self.line_tax_text.set_text(f'Skat {self.tax_sums[i + 1]:,.0f} DKK')
         self.line_yeilds_after_tax_text.set_text(f'Udbytte efter skat {self.total_sums[i + 1]:,.0f} DKK')
