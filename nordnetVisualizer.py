@@ -5,13 +5,23 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from readData import *
 import argparse
+#import wx
+import tkinter as tk
+import matplotlib.backends.backend_tkagg as tkagg
+
 
 parser = argparse.ArgumentParser(description='Process a filename.')
 parser.add_argument('-f', '--filename', default=None, help='Fil der indeholder Nordnet CVS data')
 parser.add_argument('-w', '--wxagg', dest='wxagg', action='store_true', help='Brug XXAgg libary')
+parser.add_argument('-s', '--save', dest='save', action='store_true', help='Save the animation as an MP4 file')
+parser.add_argument('-i', '--interval', type=int, default=1, help='Millisekunder mellem hvert billede (lavere = hurtigere). Default: 1')
+parser.add_argument('--step', type=int, default=1, help='Antal transaktioner der springes frem per billede (h\u00f8jere = hurtigere afspilning, men mindre gnidningsl\u00f8s). Default: 1')
 args = parser.parse_args()
 filename = args.filename
 use_wxagg = args.wxagg
+save_animation = args.save
+interval = args.interval
+step = max(1, args.step)
 
 if use_wxagg:
     matplotlib.use('WXAgg')
@@ -53,6 +63,27 @@ def update(frame):
     return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, *valuta_labels, *years_labels, *stocks_labels]
 
 
+def start_animation():
+    global ani
+
+    frames = range(0, len(data), step)
+    ani = animation.FuncAnimation(fig1, update, frames=frames, interval=interval, repeat=False, blit=True)
+
+    if save_animation:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+        line_ani.save('lines.mp4', writer=writer)
+     
+
+    else:
+        plt.show()
+
+
+start_animation()
+
+
+exit(0)
+
 def maximize_window():
     f = fig1
     x = 0
@@ -73,11 +104,6 @@ def maximize_window():
         # You can also use window.setGeometry
         f.canvas.manager.window.move(x, y, w, h)
 
-
-def start_animation():
-    global ani
-    ani = animation.FuncAnimation(fig1, update, frames=len(data), interval=1, repeat=False, blit=True)
-    plt.show()
-
 maximize_window()
-start_animation()
+
+
