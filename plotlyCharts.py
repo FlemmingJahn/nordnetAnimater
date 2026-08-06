@@ -6,6 +6,8 @@ single Plotly figure with animation frames. Once sent to the browser, the
 Play/Pause button and slider are driven entirely by Plotly.js client-side,
 so playback is smooth and doesn't need a round-trip to the server per frame.
 """
+from datetime import datetime
+
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
@@ -58,6 +60,10 @@ def _get_year(date_string):
     return str(date_string)[:4]
 
 
+def _parse_date(date_string):
+    return datetime.strptime(str(date_string), '%Y-%m-%d')
+
+
 def analyze_deposits(data):
     """Running totals of deposits/withdrawals, one entry per transaction
     (plus a leading 0), matching DepositsAndWithDrawals.analyze()."""
@@ -97,6 +103,7 @@ def analyze_yields(data):
         years_table.setdefault(_get_year(row['Bogføringsdag']), [0.0])
 
     total_sums, yield_sums, tax_sums = [0.0], [0.0], [0.0]
+    dates = [_parse_date(data[0]['Bogføringsdag'])] if data else [datetime.now()]
 
     for row in data:
         ttype = row['Transaktionstype']
@@ -121,11 +128,13 @@ def analyze_yields(data):
             years_table[k].append(years_table[k][-1] + add)
 
         tax_sums.append(tax_sums[-1] - value_dk if ttype in YIELD_TRANSACTION_TAX else tax_sums[-1])
+        dates.append(_parse_date(row['Bogføringsdag']))
 
     return {
         "total_sums": total_sums,
         "yield_sums": yield_sums,
         "tax_sums": tax_sums,
+        "dates": dates,
         "valutas_table": valutas_table,
         "stocks_table": stocks_table,
         "years_table": years_table,
@@ -172,9 +181,9 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
     # --- initial (frame 0) traces, in a fixed order matched by `traces=` below ---
     fig.add_trace(go.Scatter(x=[0], y=[deposits["sums"][0]], mode="lines", name="Total"), row=1, col=1)
     fig.add_trace(go.Bar(x=["INDBETALING", "HÆVNING"], y=[0, 0], marker_color=["green", "red"], name="Ind/hæv"), row=1, col=2)
-    fig.add_trace(go.Scatter(x=[0], y=[yields_["total_sums"][0]], mode="lines", name="Udbytte efter skat"), row=2, col=1)
-    fig.add_trace(go.Scatter(x=[0], y=[yields_["yield_sums"][0]], mode="lines", name="Udbytte"), row=2, col=1)
-    fig.add_trace(go.Scatter(x=[0], y=[yields_["tax_sums"][0]], mode="lines", name="Skat"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=[yields_["dates"][0]], y=[yields_["total_sums"][0]], mode="lines", name="Udbytte efter skat"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=[yields_["dates"][0]], y=[yields_["yield_sums"][0]], mode="lines", name="Udbytte"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=[yields_["dates"][0]], y=[yields_["tax_sums"][0]], mode="lines", name="Skat"), row=2, col=1)
     fig.add_trace(go.Bar(x=valuta_keys, y=[0] * len(valuta_keys), marker_color=_colors_for(valuta_keys), name="Valuta"), row=2, col=2)
     fig.add_trace(go.Bar(x=year_keys, y=[0] * len(year_keys), marker_color=_colors_for(year_keys), name="År"), row=2, col=3)
     fig.add_trace(go.Bar(x=stock_keys, y=[0] * len(stock_keys), marker_color=_colors_for(stock_keys), name="Aktie"), row=3, col=1)
@@ -182,6 +191,7 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
     fig.update_yaxes(range=[0, max(deposits["sums"]) * 1.05 + 1], row=1, col=1)
     fig.update_yaxes(range=[min(deposits["withdraw_sum"] + [0]), max(deposits["insert_sum"]) * 1.05 + 1], row=1, col=2)
     fig.update_yaxes(range=[0, max(yields_["yield_sums"]) * 1.05 + 1], row=2, col=1)
+    fig.update_xaxes(type="date", tickformat="%Y-%m-%d", tickangle=45, row=2, col=1)
     if valuta_keys:
         fig.update_yaxes(range=[0, max(v[-1] for v in yields_["valutas_table"].values()) * 1.2 + 1], row=2, col=2)
     if year_keys:
@@ -194,12 +204,13 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
     frames = []
     for i in _sample_indices(n, max_frames):
         x = list(range(i + 1))
+        yield_dates = yields_["dates"][:i + 1]
         frame_data = [
             go.Scatter(x=x, y=deposits["sums"][:i + 1]),
             go.Bar(y=[deposits["insert_sum"][i + 1], deposits["withdraw_sum"][i + 1]]),
-            go.Scatter(x=x, y=yields_["total_sums"][:i + 1]),
-            go.Scatter(x=x, y=yields_["yield_sums"][:i + 1]),
-            go.Scatter(x=x, y=yields_["tax_sums"][:i + 1]),
+            go.Scatter(x=yield_dates, y=yields_["total_sums"][:i + 1]),
+            go.Scatter(x=yield_dates, y=yields_["yield_sums"][:i + 1]),
+            go.Scatter(x=yield_dates, y=yields_["tax_sums"][:i + 1]),
             go.Bar(y=[yields_["valutas_table"][k][i + 1] for k in valuta_keys]),
             go.Bar(y=[yields_["years_table"][k][i + 1] for k in year_keys]),
             go.Bar(y=[yields_["stocks_table"][k][i + 1] for k in stock_keys]),
