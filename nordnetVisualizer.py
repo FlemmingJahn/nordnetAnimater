@@ -18,7 +18,7 @@ parser.add_argument('-f', '--filename', default=None, help='Fil der indeholder N
 parser.add_argument('-w', '--wxagg', dest='wxagg', action='store_true', help='Brug XXAgg libary')
 parser.add_argument('-s', '--save', dest='save', action='store_true', help='Save the animation as an MP4 file')
 parser.add_argument('-i', '--interval', type=int, default=1, help='Millisekunder mellem hvert billede ved start (kan justeres live med slideren). Default: 1')
-parser.add_argument('--step', type=int, default=1, help='Antal transaktioner der springes frem per billede ved start (kan justeres live med slideren). Default: 1')
+parser.add_argument('--step', type=int, default=10, help='Antal transaktioner der springes frem per billede ved start (kan justeres live med slideren). Default: 10')
 args = parser.parse_args()
 filename = args.filename
 use_wxagg = args.wxagg
@@ -37,7 +37,7 @@ posting_date_text = "Bogføringsdag"
 fig1, axs = plt.subplots(nrows=3, ncols=3, figsize=(12, 6))
 plt.subplots_adjust(bottom=0.2)
 fig_ax = axs[0, 0]
-fig_ax2 = axs[0, 1]
+axs[0, 1].set_position([0, 0, 0, 0])
 axs[0, 2].set_position([0, 0, 0, 0])
 
 fig_ax3 = axs[1, 0]
@@ -53,11 +53,11 @@ fig_yield_ax3.set_position([0.125, 0.22, 0.78, 0.15])
 fig1.text(0.5, 0.04, 'x-axis', ha='center')
 fig1.text(0.04, 0.5, 'y-axis', va='center', rotation='vertical')
 # Add blank subplots to ensure consistent dimensions
-blank_axs = [axs[0, 2], axs[2, 1], axs[2, 2]]
+blank_axs = [axs[0, 1], axs[0, 2], axs[2, 1], axs[2, 2]]
 for ax in blank_axs:
     ax.axis('off')
 
-deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, fig_ax2, data=data)
+deposits_and_withdrawals = DepositsAndWithDrawals(fig1, fig_ax, data=data)
 yields = Yields(fig1, fig_ax3, fig_ax4, fig_yeild_years, fig_yield_ax3, data=data)
 
 # Live-adjustable playback speed. `position` tracks how far through the
@@ -111,7 +111,7 @@ restart_button.on_clicked(on_restart_clicked)
 
 def update(_):
     idx = min(position["i"], len(data) - 1)
-    line, rects, text, labels = deposits_and_withdrawals.update(idx)
+    line, text = deposits_and_withdrawals.update(idx)
     total_line, yield_line, tax_line, valuta_rects, years_rects, stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, valuta_labels, years_labels, stocks_labels = yields.update(idx)
 
     if idx >= len(data) - 1:
@@ -119,7 +119,7 @@ def update(_):
     else:
         position["i"] = min(position["i"] + playback["step"], len(data) - 1)
 
-    return [line, *rects, text, *labels, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, *valuta_labels, *years_labels, *stocks_labels]
+    return [line, text, total_line, yield_line, tax_line, *valuta_rects, *years_rects, *stocks_rects, line_total_text, line_tax_text, line_yeilds_after_tax_text, *valuta_labels, *years_labels, *stocks_labels]
 
 
 def start_animation():

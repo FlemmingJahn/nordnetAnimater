@@ -160,14 +160,14 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
     n = len(data)
 
     specs = [
-        [{}, {}, None],
+        [{"colspan": 2}, None, None],
         [{}, {}, {}],
         [{"colspan": 3}, None, None],
     ]
     fig = make_subplots(
         rows=3, cols=3, specs=specs,
         subplot_titles=(
-            "Ind- og udbetalinger (total)", "Ind- og udbetalinger",
+            "Ind- og udbetalinger (total)",
             "Udbytte", "Udbytte pr. valuta", "Udbytte pr. år",
             "Udbytte pr. aktie",
         ),
@@ -180,7 +180,6 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
 
     # --- initial (frame 0) traces, in a fixed order matched by `traces=` below ---
     fig.add_trace(go.Scatter(x=[0], y=[deposits["sums"][0]], mode="lines", name="Total"), row=1, col=1)
-    fig.add_trace(go.Bar(x=["INDBETALING", "HÆVNING"], y=[0, 0], marker_color=["green", "red"], name="Ind/hæv"), row=1, col=2)
     fig.add_trace(go.Scatter(x=[yields_["dates"][0]], y=[yields_["total_sums"][0]], mode="lines", name="Udbytte efter skat"), row=2, col=1)
     fig.add_trace(go.Scatter(x=[yields_["dates"][0]], y=[yields_["yield_sums"][0]], mode="lines", name="Udbytte"), row=2, col=1)
     fig.add_trace(go.Scatter(x=[yields_["dates"][0]], y=[yields_["tax_sums"][0]], mode="lines", name="Skat"), row=2, col=1)
@@ -189,7 +188,6 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
     fig.add_trace(go.Bar(x=stock_keys, y=[0] * len(stock_keys), marker_color=_colors_for(stock_keys), name="Aktie"), row=3, col=1)
 
     fig.update_yaxes(range=[0, max(deposits["sums"]) * 1.05 + 1], row=1, col=1)
-    fig.update_yaxes(range=[min(deposits["withdraw_sum"] + [0]), max(deposits["insert_sum"]) * 1.05 + 1], row=1, col=2)
     fig.update_yaxes(range=[0, max(yields_["yield_sums"]) * 1.05 + 1], row=2, col=1)
     fig.update_xaxes(type="date", tickformat="%Y-%m-%d", tickangle=45, row=2, col=1)
     if valuta_keys:
@@ -207,7 +205,6 @@ def build_figure(data, max_frames=200, frame_duration_ms=60):
         yield_dates = yields_["dates"][:i + 1]
         frame_data = [
             go.Scatter(x=x, y=deposits["sums"][:i + 1]),
-            go.Bar(y=[deposits["insert_sum"][i + 1], deposits["withdraw_sum"][i + 1]]),
             go.Scatter(x=yield_dates, y=yields_["total_sums"][:i + 1]),
             go.Scatter(x=yield_dates, y=yields_["yield_sums"][:i + 1]),
             go.Scatter(x=yield_dates, y=yields_["tax_sums"][:i + 1]),

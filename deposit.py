@@ -1,5 +1,3 @@
-from matplotlib.ticker import ScalarFormatter
-
 class DepositsAndWithDrawals:
     transaction_inserts = ['INDBETALING', 'INDSÆTTELSE', 'Straksoverførsel']
     transaction_type = ['INDBETALING', 'HÆVNING', "INDSÆTTELSE", 'Straksoverførsel']
@@ -9,21 +7,14 @@ class DepositsAndWithDrawals:
     sum = [0]
     sums = [0]
 
-    def __init__(self, fig1, fig_ax, fig_ax2, data):
+    def __init__(self, fig1, fig_ax, data):
         self.ax = fig_ax
-        self.ax2 = fig_ax2
 
-        # Disable scientific notation for y-axis tick labels, but keep the axis label as 1e6
-        formatter = ScalarFormatter(useMathText=True)
-        formatter.set_powerlimits((0, 0))
-        self.ax2.yaxis.set_major_formatter(formatter)
         self.fig = fig1
         self.line, = fig_ax.plot([], [])
         self.line_text = fig_ax.text(0.04, 0.90, '', transform=fig_ax.transAxes)
         self.insert_sum = [0]
         self.withdraw_sum = [0]
-        self.rects = self.ax2.bar(['INDBETALING', 'HÆVNING'], [0,0], color=['green', 'red'])
-        self.bar_labels = []  # Store the bar label text objects
         self.analyze(data)
 
     def init(self):
@@ -49,22 +40,18 @@ class DepositsAndWithDrawals:
                 self.insert_sum.append(self.insert_sum[-1])
                 self.withdraw_sum.append(self.withdraw_sum[-1])
 
-        self.ax2.set_title('Ind- og ud-betalinger')
         self.ax.set_title('', fontsize=40)
         self.ax.set_title('Ind- og ud-betalinger')
 
         if (len(self.sums) != 0):
+            # The line's x-data is the transaction index (range(i + 1)), so the
+            # x-axis limits must be based on the number of data points, not on
+            # the money values in self.sums.
             if len(set(self.sums)) == 1:  # Check if all values in self.sums are the same
                 self.ax.set_ylim(0, max(self.sums) + 1)  # Expand the limits slightly
-                self.ax.set_xlim(0, max(self.sums) + 1)  # Expand the limits slightly
             else:
-                self.ax.set_ylim(0, max(self.sums))
-                self.ax.set_xlim(0, max(self.sums))
-
-            if min(self.withdraw_sum) == max(self.insert_sum):
-                self.ax2.set_ylim([min(self.withdraw_sum), max(self.insert_sum) +1 ])  # Adjust the range as needed
-            else:
-                self.ax2.set_ylim([min(self.withdraw_sum), max(self.insert_sum)])  # Adjust the range as needed
+                self.ax.set_ylim(min(0, min(self.sums)), max(self.sums))
+            self.ax.set_xlim(0, len(self.sums) - 1)
 
     def plot_line(self, i):
         if self.sums[:i + 1] == self.sums[:i]:
@@ -73,39 +60,10 @@ class DepositsAndWithDrawals:
         self.line_text.set_text(f'Total: {self.sums[i]:,.0f} DKK')
         self.line.set_data(range(i + 1), self.sums[:i + 1])
 
-    def plot_bars(self, index):
-        if self.insert_sum[index + 1] == self.insert_sum[index] and self.withdraw_sum[index + 1] == self.withdraw_sum[index]:
-            return
-
-        if self.rects is not None:
-            for rect in self.rects:
-                rect.remove()
-
-        totals = [self.insert_sum[index + 1], self.withdraw_sum[index + 1]]
-        self.rects = self.ax2.bar(['INDBETALING', 'HÆVNING'], totals, color=['green', 'red'])
-
-        if self.bar_labels is not None:
-            for label in self.bar_labels:
-                label.remove()
-
-        self.bar_labels = []
-        for rect, total in zip(self.rects, totals):
-            height = rect.get_height()
-            label = self.ax2.text(rect.get_x() + rect.get_width() / 2, height, f'{total:,.0f} DKK', ha='center', va='bottom')
-            self.bar_labels.append(label)
-
-        return self.rects
-
     def update(self, i):
         self.plot_line(i)
-        self.plot_bars(i)
 
-        # Update the bar label positions and text values
-        for rect, total, label in zip(self.rects, [self.insert_sum[i + 1], self.withdraw_sum[i + 1]], self.bar_labels):
-            label.set_position((rect.get_x() + rect.get_width() / 2, 0))
-            label.set_text(f'{total:,.0f} DKK')
-
-        return self.line, self.rects, self.line_text, self.bar_labels
+        return self.line, self.line_text
 
     def figure(self):
         pass
